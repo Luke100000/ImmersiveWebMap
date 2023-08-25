@@ -1,0 +1,27 @@
+modLoader = "javafml"
+loaderVersion = "[35,)"
+issueTrackerURL = "https://github.com/Luke100000/ImmersiveWebMap/issues"
+license = "GNU"
+
+[[mods]]
+modId = "immersive_web_map"
+version = "${version}"
+displayName = "Immersive Web Map"
+displayURL = "https://www.curseforge.com/minecraft/mc-mods/ImmersiveWebMap"
+authors = "Luke100000"
+description = "Syncs to a vanilla styled web map."
+logoFile = "icon.png"
+
+[[dependencies.immersive_web_map]]
+modId = "forge"
+mandatory = true
+versionRange = "[47,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.immersive_web_map]]
+modId = "minecraft"
+mandatory = true
+versionRange = "[1.20.1]"
+ordering = "NONE"
+side = "BOTH"

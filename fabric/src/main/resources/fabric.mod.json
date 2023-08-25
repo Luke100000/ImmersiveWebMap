@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "immersive_web_map",
+  "version": "${version}",
+  "name": "Immersive Web Map",
+  "description": "Syncs to a vanilla styled web map.",
+  "authors": [
+    "Luke100000"
+  ],
+  "contact": {
+    "homepage": "https://www.curseforge.com/minecraft/mc-mods/ImmersiveWebMap",
+    "sources": "https://github.com/Luke100000/ImmersiveWebMap",
+    "issues": "https://github.com/Luke100000/ImmersiveWebMap/issues"
+  },
+  "license": "GNU",
+  "icon": "icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "immersive_web_map.fabric.Fabric"
+    ]
+  },
+  "mixins": [
+    "immersive_web_map.mixin.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.11.3",
+    "java": ">=8",
+    "fabric-api-base": ">=0.1.0"
+  }
+}
