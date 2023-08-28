@@ -80,7 +80,25 @@ public class MapManager {
 
                 mutable.set(sx + x, 0, sz + z);
 
-                int height = heightmap.get(x, z);
+                int height;
+                if (world.getDimension().hasCeiling())  {
+                    height = 64;
+
+                    // Move up until a non-solid block has been hit
+                    while (height < world.getTopY() && chunk.getBlockState(mutable).isSolidBlock(world, mutable)) {
+                        mutable.setY(++height);
+                    }
+
+                    // If we reached the very top, move down until we hit a non-solid block
+                    if (mutable.getY() == world.getTopY()) {
+                        height = 64;
+                        while (height > world.getBottomY() && chunk.getBlockState(mutable).isSolidBlock(world, mutable)) {
+                            mutable.setY(--height);
+                        }
+                    }
+                } else {
+                    height = heightmap.get(x, z);
+                }
 
                 BlockState blockState;
                 if (height > world.getBottomY()) {
