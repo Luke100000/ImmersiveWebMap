@@ -19,10 +19,6 @@ import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkStatus;
 import org.jetbrains.annotations.NotNull;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -34,8 +30,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static java.awt.image.BufferedImage.TYPE_INT_ARGB;
-
 public class MapManager {
     protected static final Executor RENDERER = Executors.newFixedThreadPool(Config.getInstance().renderThreads);
     protected static final Executor UPLOADER = Executors.newFixedThreadPool(Config.getInstance().uploadThreads);
@@ -44,7 +38,7 @@ public class MapManager {
     public static final AtomicInteger outstandingRenders = new AtomicInteger();
     public static final AtomicInteger outstandingUploads = new AtomicInteger();
 
-    private static final int BATCH_SIZE = 128;
+    private static final int BATCH_SIZE = 100;
 
     private static final Map<String, ConcurrentLinkedQueue<Map<String, String>>> COMPACTOR = new ConcurrentHashMap<>();
 
@@ -76,7 +70,7 @@ public class MapManager {
         int sx = chunk.getPos().getStartX();
         int sz = chunk.getPos().getStartZ();
 
-        BufferedImage bufferedImage = new BufferedImage(16, 16, TYPE_INT_ARGB);
+        byte[] image = new byte[16 * 16 * 4];
 
         BlockPos.Mutable mutable = new BlockPos.Mutable();
         for (int x = 0; x < 16; x++) {
@@ -115,23 +109,19 @@ public class MapManager {
                 // Construct color
                 MapColor mapColor = blockState.getMapColor(world, mutable);
                 MapColor.Brightness brightness = getBrightness(x, lastHeight < 0 ? height : lastHeight, z, depth, height, mapColor);
-                int renderColor = getRenderColor(mapColor, brightness);
 
-                bufferedImage.setRGB(x, z, renderColor);
+                int a = brightness.brightness;
+                image[x * 4 + z * 64] = (byte) ((mapColor.color >> 16 & 255) * a / 255);
+                image[x * 4 + z * 64 + 1] = (byte) ((mapColor.color >> 8 & 255) * a / 255);
+                image[x * 4 + z * 64 + 2] = (byte) ((mapColor.color & 255) * a / 255);
+                image[x * 4 + z * 64 + 3] = 127;
 
                 lastHeight = height;
             }
         }
 
         // Encode image
-        final ByteArrayOutputStream os = new ByteArrayOutputStream();
-        final String data;
-        try {
-            ImageIO.write(bufferedImage, "png", os);
-            data = Base64.getEncoder().encodeToString(os.toByteArray());
-        } catch (final IOException ioe) {
-            throw new RuntimeException(ioe);
-        }
+        final String data = Base64.getEncoder().encodeToString(image);
 
         // Pack chunks
         Map<String, String> packet = Map.of(
@@ -192,18 +182,6 @@ public class MapManager {
             return fluidState.getBlockState();
         }
         return state;
-    }
-
-    private static int getRenderColor(MapColor color, MapColor.Brightness brightness) {
-        if (color == MapColor.CLEAR) {
-            return 0;
-        } else {
-            int a = brightness.brightness;
-            int r = (color.color >> 16 & 255) * a / 255;
-            int g = (color.color >> 8 & 255) * a / 255;
-            int b = (color.color & 255) * a / 255;
-            return -16777216 | r << 16 | g << 8 | b;
-        }
     }
 
     private static int tick;
@@ -272,10 +250,12 @@ public class MapManager {
                 if (poll == null) break;
                 buffer.add(poll);
             }
+            outstandingUploads.incrementAndGet();
             UPLOADER.execute(() -> {
                 API.request(API.HttpMethod.GET, endpoint, Map.of(
                         "token", AuthHandler.getImmersiveToken()
                 ), buffer);
+                outstandingUploads.decrementAndGet();
             });
         }
     }
@@ -288,5 +268,13 @@ public class MapManager {
 
     public static boolean isUnseen(Chunk chunk) {
         return !SEEN.containsKey(chunk.getPos().toLong());
+    }
+
+    public static void clearSeen() {
+        SEEN.clear();
+
+        totalRenders.set(0);
+        outstandingRenders.set(0);
+        outstandingUploads.set(0);
     }
 }

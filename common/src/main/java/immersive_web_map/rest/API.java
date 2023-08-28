@@ -5,6 +5,7 @@ import immersive_web_map.Common;
 import immersive_web_map.Config;
 import org.apache.commons.io.IOUtils;
 
+import java.io.ByteArrayOutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -12,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 public class API {
     public enum HttpMethod {
@@ -48,7 +50,15 @@ public class API {
                 con.setDoOutput(true);
                 Gson gson = new Gson();
                 String jsonBody = gson.toJson(body);
-                con.getOutputStream().write(jsonBody.getBytes(StandardCharsets.UTF_8));
+
+                ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+                try (GZIPOutputStream gzipStream = new GZIPOutputStream(byteStream)) {
+                    gzipStream.write(jsonBody.getBytes(StandardCharsets.UTF_8));
+                }
+                byte[] compressedData = byteStream.toByteArray();
+
+                con.setRequestProperty("Content-Encoding", "gzip");
+                con.getOutputStream().write(compressedData);
             }
 
             // Send the request and read response

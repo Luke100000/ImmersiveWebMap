@@ -15,6 +15,7 @@ public final class Common {
 
     public static void serverStarted(MinecraftServer server) {
         AuthHandler.auth(server);
+        MapManager.clearSeen();
     }
 
     public static void serverStopping(MinecraftServer server) {

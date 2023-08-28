@@ -1,16 +1,18 @@
 import base64
+import gzip
 import json
 import os
 import shutil
+import time
 import uuid
-from io import BytesIO
-from typing import List
+from typing import List, Callable
 
 import imageio.v2 as imageio
 import numpy as np
 from asyncache import cached
 from cachetools import TTLCache
 from databases import Database
+from fastapi.routing import APIRoute
 from fastapi.templating import Jinja2Templates
 from prometheus_client import CollectorRegistry, multiprocess
 from pydantic import BaseModel
@@ -34,7 +36,30 @@ if prom_dir is not None:
 from fastapi import FastAPI, Request
 from prometheus_fastapi_instrumentator import Instrumentator
 
+
+class GzipRequest(Request):
+    async def body(self) -> bytes:
+        if not hasattr(self, "_body"):
+            body = await super().body()
+            if "gzip" in self.headers.getlist("Content-Encoding"):
+                body = gzip.decompress(body)
+            self._body = body
+        return self._body
+
+
+class GzipRoute(APIRoute):
+    def get_route_handler(self) -> Callable:
+        original_route_handler = super().get_route_handler()
+
+        async def custom_route_handler(request: Request) -> Response:
+            request = GzipRequest(request.scope, request.receive)
+            return await original_route_handler(request)
+
+        return custom_route_handler
+
+
 app = FastAPI()
+app.router.route_class = GzipRoute
 
 app.add_middleware(GZipMiddleware, minimum_size=4096, compresslevel=6)
 
@@ -48,7 +73,7 @@ app.add_middleware(
 )
 
 # Open Database
-database = Database("sqlite:///database.db")
+database = Database("sqlite:///database.db", timeout=5)
 
 # Prometheus integration
 instrumentator = Instrumentator().instrument(app)
@@ -202,7 +227,7 @@ async def index(request: Request, server: int, dimension: str):
             "server": server,
             "dimension": dimension,
             "dimensions": [d[0] for d in dimensions],
-            "serverName": json.loads(meta[0])["name"]
+            "serverName": json.loads(meta[0])["name"],
         },
     )
 
@@ -297,20 +322,23 @@ async def post_chunks(
         identifier = await get_dimension_identifier(server, dimension)
         await ensure_chunk_table(identifier)
 
-        values = []
+        query = []
+        values = {}
+        i = 0
         for chunk in payload:
-            values.append(
-                {
-                    "x": chunk.x,
-                    "y": chunk.y,
-                    "z": chunk.z,
-                    "color": chunk.payload,
-                    "meta": chunk.meta,
-                }
-            )
+            values[f"x{i}"] = chunk.x
+            values[f"y{i}"] = chunk.y
+            values[f"z{i}"] = chunk.z
+            values[f"color{i}"] = chunk.payload
+            values[f"meta{i}"] = chunk.meta
 
-        await database.execute_many(
-            f"INSERT OR REPLACE INTO chunks_{identifier} (x, y, z, color, meta) VALUES (:x, :y, :z, :color, :meta)",
+            query.append(f"(:x{i}, :y{i}, :z{i}, :color{i}, :meta{i})")
+
+            i += 1
+
+        await database.execute(
+            f"INSERT OR REPLACE INTO chunks_{identifier} (x, y, z, color, meta) VALUES "
+            + ", ".join(query),
             values,
         )
 
@@ -340,7 +368,7 @@ async def get_chunk_png(
     )
 
     for chunk in chunks:
-        color = imageio.imread(BytesIO(chunk[0]), format="png")[:, :, :3]
+        color = np.frombuffer(chunk[0], np.uint8).reshape((16, 16, 4))[:, :, :3]
 
         if scale > 1:
             # todo
