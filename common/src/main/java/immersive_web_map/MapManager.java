@@ -38,7 +38,7 @@ public class MapManager {
     public static final AtomicInteger outstandingRenders = new AtomicInteger();
     public static final AtomicInteger outstandingUploads = new AtomicInteger();
 
-    private static final int BATCH_SIZE = 100;
+    private static final int BATCH_SIZE = 256;
 
     private static final Map<String, ConcurrentLinkedQueue<Map<String, String>>> COMPACTOR = new ConcurrentHashMap<>();
 
@@ -221,6 +221,9 @@ public class MapManager {
                 dimJson.addProperty("time", world.getTimeOfDay() % 24000);
                 dimJson.addProperty("day", world.getTimeOfDay() / 24000);
                 dimJson.addProperty("weather", world.isRaining() ? "raining" : "clear");
+                dimJson.addProperty("spawnX", world.getSpawnPos().getX());
+                dimJson.addProperty("spawnY", world.getSpawnPos().getY());
+                dimJson.addProperty("spawnZ", world.getSpawnPos().getZ());
 
                 // Add players
                 JsonArray players = new JsonArray();

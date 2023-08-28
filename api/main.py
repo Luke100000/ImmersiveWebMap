@@ -6,6 +6,7 @@ import shutil
 import time
 import uuid
 from typing import List, Callable
+from urllib.parse import quote_plus
 
 import imageio.v2 as imageio
 import numpy as np
@@ -59,6 +60,7 @@ class GzipRoute(APIRoute):
 
 
 app = FastAPI()
+# noinspection PyUnresolvedReferences
 app.router.route_class = GzipRoute
 
 app.add_middleware(GZipMiddleware, minimum_size=4096, compresslevel=6)
@@ -71,6 +73,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # Open Database
 database = Database("sqlite:///database.db", timeout=5)
@@ -88,6 +91,17 @@ templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
+def urlencode_filter(s):
+    if type(s) == "Markup":
+        s = s.unescape()
+    s = s.encode("utf8")
+    s = quote_plus(s)
+    return s
+
+
+templates.env.filters["urlencode"] = urlencode_filter
+
+
 async def setup():
     await database.execute("PRAGMA foreign_keys=ON")
 
@@ -96,7 +110,8 @@ async def setup():
         CREATE TABLE IF NOT EXISTS servers (
            oid INTEGER PRIMARY KEY AUTOINCREMENT,
            token TEXT,
-           meta TEXT
+           meta TEXT,
+           password TEXT
         )
     """
     )
@@ -211,14 +226,35 @@ async def ensure_chunk_table(identifier: int):
 
 
 @app.get("/map/{server}/{dimension}")
-async def index(request: Request, server: int, dimension: str):
+async def index(request: Request, server: int, dimension: str, player: str = None):
     dimensions = await database.fetch_all(
         "SELECT key FROM dimensions WHERE server = :server", {"server": server}
     )
 
-    meta = await database.fetch_one(
-        "SELECT meta FROM servers WHERE oid = :server", {"server": server}
+    meta = json.loads(
+        (
+            await database.fetch_one(
+                "SELECT meta FROM servers WHERE oid = :server", {"server": server}
+            )
+        )[0]
     )
+
+    dimMeta = json.loads(
+        (
+            await database.fetch_one(
+                "SELECT meta FROM dimensions WHERE server = :server AND key = :key",
+                {"server": server, "key": dimension},
+            )
+        )[0]
+    )
+
+    # Focus on player
+    spawn = (dimMeta["spawnX"], dimMeta["spawnY"], dimMeta["spawnZ"])
+    if player is not None:
+        for p in dimMeta["players"]:
+            if p["name"] == player:
+                spawn = (p["x"], p["y"], p["z"])
+                break
 
     return templates.TemplateResponse(
         "index.html",
@@ -227,16 +263,21 @@ async def index(request: Request, server: int, dimension: str):
             "server": server,
             "dimension": dimension,
             "dimensions": [d[0] for d in dimensions],
-            "serverName": json.loads(meta[0])["name"],
+            "serverName": meta["name"],
+            "players": [p["name"] for p in dimMeta["players"]],
+            "originX": spawn[0],
+            "originY": spawn[1],
+            "originZ": spawn[2],
         },
     )
 
 
 @app.get("/v1/auth")
-async def auth(server: int = -1, token: str = "none"):
+async def auth(server: int = -1, password: str = "", token: str = "none"):
     """
     Generates a server id and authorization token, or verify existing authorization and generate a new one if invalid
     :param server: The server id
+    :param password: The optional password to protect the server
     :param token: The authorization token
     """
 

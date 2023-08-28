@@ -4,6 +4,9 @@ let currentServer = -1;
 let currentDimension = "";
 let ctx;
 
+let originX;
+let originZ;
+
 window.onload = async function () {
     const cache = new Map();
     const targetResolution = 256;
@@ -73,6 +76,7 @@ window.onload = async function () {
             canvas.height = targetHeight;
             ctx.imageSmoothingEnabled = false;
             ctx.resetTransform();
+            ctx.translate(canvas.width / 2 - originX, canvas.height / 2 - originZ);
         }
 
         // Clear the entire canvas
@@ -199,7 +203,7 @@ window.onload = async function () {
     canvas.addEventListener('mousewheel', handleScroll, false);
 
     async function fetchMeta() {
-        let url = "http://localhost:8000/v1/meta/1/minecraft%3Aoverworld";
+        let url = "http://localhost:8000/v1/meta/" + currentServer + "/" + currentDimension;
         try {
             const response = await fetch(url);
             if (response.ok) {
@@ -213,6 +217,9 @@ window.onload = async function () {
 
     setInterval(fetchMeta, 10000);
     await fetchMeta();
+
+    ctx.resetTransform();
+    ctx.translate(canvas.width / 2 - originX, canvas.height / 2 - originZ);
 };
 
 // Adds ctx.getTransform() - returns an SVGMatrix

@@ -36,7 +36,18 @@
                     </a>
                     <ul class="dropdown-menu">
                         {% for dimension in dimensions %}
-                            <li><a class="dropdown-item" href="./{{ dimension }}">{{ dimension }}</a></li>
+                            <li><a class="dropdown-item" href="./{{ dimension | urlencode }}">{{ dimension }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
+                       aria-expanded="false">
+                        Player
+                    </a>
+                    <ul class="dropdown-menu">
+                        {% for player in players %}
+                            <li><a class="dropdown-item" href="./{{ dimension | urlencode }}?player={{ player | urlencode }}">{{ player }}</a></li>
                         {% endfor %}
                     </ul>
                 </li>
@@ -54,10 +65,12 @@
 <script>
     currentServer = {{ server }};
     currentDimension = "{{ dimension }}";
+    originX = {{ originX }};
+    originZ = {{ originZ }};
 </script>
 
 <div class="fixed-bottom text-center p-3" style="background-color: rgba(0, 0, 0, 0.05);">
-    Provided by <a class="text-reset fw-bold" href="">Immersive Web Map</a>
+    Provided by <a class="text-reset fw-bold" href="https://modrinth.com/mod/immersive-web-map">Immersive Web Map</a>
 </div>
 
 </body>
