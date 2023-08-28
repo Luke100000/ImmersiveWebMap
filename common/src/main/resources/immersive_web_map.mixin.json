@@ -4,8 +4,10 @@
   "package": "immersive_web_map.mixin",
   "compatibilityLevel": "JAVA_16",
   "mixins": [
+    "ThreadedAnvilChunkStorageMixin"
   ],
   "client": [
+    "DebugHudMixin"
   ],
   "injectors": {
     "defaultRequire": 1

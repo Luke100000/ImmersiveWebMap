@@ -1,0 +1,13 @@
+canvas {
+    display: block;
+    margin: 1em auto;
+    background: #fff;
+    border: 1px solid #ccc;
+}
+
+.feature {
+}
+
+.clear {
+    clear: both;
+}

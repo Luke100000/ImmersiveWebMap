@@ -41,3 +41,5 @@ forge*changelog.txt
 *.blend
 *.blend1
 *.mtl
+/api/venv/
+/api/database.db
