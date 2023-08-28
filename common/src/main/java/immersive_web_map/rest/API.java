@@ -11,11 +11,15 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 public class API {
+    public static AtomicInteger bytesSent = new AtomicInteger();
+    public static AtomicInteger bodiesSent = new AtomicInteger();
+
     public enum HttpMethod {
         POST, GET, DELETE, PUT
     }
@@ -59,6 +63,9 @@ public class API {
 
                 con.setRequestProperty("Content-Encoding", "gzip");
                 con.getOutputStream().write(compressedData);
+
+                bytesSent.addAndGet(compressedData.length);
+                bodiesSent.incrementAndGet();
             }
 
             // Send the request and read response
