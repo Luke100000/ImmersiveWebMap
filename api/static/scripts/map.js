@@ -17,6 +17,30 @@ window.onload = async function () {
         return Math.max(1, Math.min(16, 2 ** Math.floor(Math.log2(zoom) + qualityOffset)));
     }
 
+    const chunkMetaCache = new Map();
+    const chunkMetaRequested = new Set();
+    const CHUNKS_PER_REGION = 16;
+
+    function getChunkMeta(x, z) {
+        let cx = Math.floor(x / CHUNKS_PER_REGION);
+        let cz = Math.floor(z / CHUNKS_PER_REGION);
+        let id = cx + "_" + cz;
+        if (!chunkMetaRequested.has(id)) {
+            chunkMetaRequested.add(id)
+            let url = "/v1/chunk_meta/" + currentServer + "/" + currentDimension + "?x=" + cx * CHUNKS_PER_REGION + "&z=" + cz * CHUNKS_PER_REGION + "&w=" + CHUNKS_PER_REGION + "&h=" + CHUNKS_PER_REGION;
+            new Promise(async () => {
+                let chunks = await fetchJson(url);
+                for (let chunkJson of chunks) {
+                    id = chunkJson["x"] + "_" + chunkJson["z"];
+                    chunkMetaCache.set(id, chunkJson["meta"]);
+                }
+                redraw();
+            });
+        }
+        id = x + "_" + z;
+        return chunkMetaCache.has(id) ? chunkMetaCache.get(id) : {}
+    }
+
     function getImage(x, y, tileSize, scale, load_image = false) {
         const tileCount = tileSize / 16;
         const path = "/v1/chunk/" + currentServer + "/" + currentDimension + "?x=" + (x * tileCount) + "&z=" + (y * tileCount) + "&w=" + tileCount + "&h=" + tileCount + "&scale=" + scale
@@ -68,6 +92,27 @@ window.onload = async function () {
         redraw()
     });
 
+    function getRange(p1, p2, s, max) {
+        let sx = Math.floor(p1.x / s);
+        let ex = Math.ceil(p2.x / s);
+
+        let sy = Math.floor(p1.y / s);
+        let ey = Math.ceil(p2.y / s);
+
+        // Limit max tiles
+        while ((ex - sx) * (ey - sy) > max) {
+            if ((ex - sx) > (ey - sy)) {
+                sx++;
+                ex--;
+            } else {
+                sy++;
+                ey--;
+            }
+        }
+
+        return [sx, sy, ex, ey]
+    }
+
     function redraw() {
         let targetWidth = window.innerWidth - 20;
         let targetHeight = window.innerHeight - 120;
@@ -93,11 +138,8 @@ window.onload = async function () {
         let zoom = Math.sqrt((p3.x - p1.x) ** 2 + (p3.y - p1.y) ** 2);
         let tileSize = targetResolution * getScale(zoom);
 
-        let sx = Math.floor(p1.x / tileSize);
-        let ex = Math.ceil(p2.x / tileSize);
-
-        let sy = Math.floor(p1.y / tileSize);
-        let ey = Math.ceil(p2.y / tileSize);
+        let e = getRange(p1, p2, tileSize, 100);
+        let sx = e[0], sy = e[1], ex = e[2], ey = e[3];
 
         // Limit max tiles
         while ((ex - sx) * (ey - sy) > 100) {
@@ -143,6 +185,27 @@ window.onload = async function () {
             }
         }
 
+        if (zoom < 4) {
+            e = getRange(p1, p2, 16, 256);
+            sx = e[0];
+            sy = e[1];
+            ex = e[2];
+            ey = e[3];
+
+            // Render meta
+            for (let x = sx; x < ex; x++) {
+                for (let y = sy; y < ey; y++) {
+                    let meta = getChunkMeta(x, y);
+                    if (meta["team"]) {
+                        ctx.save();
+                        ctx.fillStyle = "red";
+                        ctx.fillRect(x * 16, y * 16, 16 + margin, 16 + margin);
+                        ctx.restore();
+                    }
+                }
+            }
+        }
+
         // Render players
         if (jsonDimensionData != null) {
             if (jsonDimensionData["players"]) {
@@ -177,6 +240,9 @@ window.onload = async function () {
     }, false);
 
     canvas.addEventListener('mousemove', function (evt) {
+        $("#tooltip-box").css({top: evt.pageY, left: evt.pageX });
+        $('[data-toggle="tooltip"]').tooltip('show')
+
         lastX = evt.offsetX || (evt.pageX - canvas.offsetLeft);
         lastY = evt.offsetY || (evt.pageY - canvas.offsetTop);
         dragged = true;
@@ -203,17 +269,24 @@ window.onload = async function () {
     canvas.addEventListener('DOMMouseScroll', handleScroll, false);
     canvas.addEventListener('mousewheel', handleScroll, false);
 
-    async function fetchMeta() {
-        let url = "/v1/meta/" + currentServer + "/" + currentDimension;
+    async function fetchJson(url) {
         try {
             const response = await fetch(url);
             if (response.ok) {
-                jsonDimensionData = (await response.json())["meta"];
-                redraw();
+                return await response.json();
+            } else {
+                console.error('Error fetching JSON:', response.status);
             }
         } catch (error) {
             console.error('Error fetching JSON:', error);
         }
+        return null;
+    }
+
+    async function fetchMeta() {
+        let url = "/v1/meta/" + currentServer + "/" + currentDimension;
+        jsonDimensionData = (await fetchJson(url))["meta"];
+        redraw();
     }
 
     setInterval(fetchMeta, 10000);

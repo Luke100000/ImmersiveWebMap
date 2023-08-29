@@ -2,6 +2,7 @@ package immersive_web_map;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import immersive_web_map.integration.IntegrationManager;
 import immersive_web_map.rest.API;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -141,11 +142,15 @@ public class MapManager {
         // Encode image
         final String data = Base64.getEncoder().encodeToString(image);
 
+        // Build chunk meta
+        JsonObject meta = new JsonObject();
+        IntegrationManager.fillChunkMeta(meta, world, chunk.getPos());
+
         // Pack chunks
         Map<String, String> packet = Map.of(
                 "x", String.valueOf(sx / 16),
                 "z", String.valueOf(sz / 16),
-                "meta", "{}",
+                "meta", meta.toString(),
                 "data", data
         );
 

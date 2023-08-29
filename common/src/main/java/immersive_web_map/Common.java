@@ -1,5 +1,6 @@
 package immersive_web_map;
 
+import immersive_web_map.integration.IntegrationManager;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.Identifier;
 import org.apache.logging.log4j.LogManager;
@@ -16,6 +17,7 @@ public final class Common {
     public static void serverStarted(MinecraftServer server) {
         AuthHandler.auth(server);
         MapManager.clearSeen();
+        IntegrationManager.init();
     }
 
     public static void serverStopping(MinecraftServer server) {

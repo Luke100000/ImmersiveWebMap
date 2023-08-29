@@ -47,7 +47,9 @@
                     </a>
                     <ul class="dropdown-menu">
                         {% for player in players %}
-                            <li><a class="dropdown-item" href="./{{ dimension | urlencode }}?player={{ player | urlencode }}">{{ player }}</a></li>
+                            <li><a class="dropdown-item"
+                                   href="./{{ dimension | urlencode }}?player={{ player | urlencode }}">{{ player }}</a>
+                            </li>
                         {% endfor %}
                     </ul>
                 </li>
@@ -61,6 +63,9 @@
 </div>
 
 <script src="{{ url_for('static', path='/scripts/map.js') }}"></script>
+
+<i id="tooltip-box" data-toggle="tooltip" data-placement="right" title="Tooltip for image" data-animation="false"
+   data-trigger="manual"></i>
 
 <script>
     currentServer = {{ server }};

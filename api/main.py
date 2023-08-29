@@ -3,7 +3,6 @@ import gzip
 import json
 import os
 import shutil
-import time
 import uuid
 from typing import List, Callable
 from urllib.parse import quote_plus
@@ -19,8 +18,10 @@ from prometheus_client import CollectorRegistry, multiprocess
 from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
+from starlette.requests import empty_receive, empty_send
 from starlette.responses import JSONResponse, Response
 from starlette.staticfiles import StaticFiles
+from starlette.types import Receive, Scope, Send
 
 # Setup prometheus for multiprocessing
 prom_dir = (
@@ -39,6 +40,12 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 
 class GzipRequest(Request):
+    def __init__(
+        self, scope: Scope, receive: Receive = empty_receive, send: Send = empty_send
+    ):
+        super().__init__(scope, receive, send)
+        self._body = None
+
     async def body(self) -> bytes:
         if not hasattr(self, "_body"):
             body = await super().body()
@@ -73,7 +80,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 # Open Database
 database = Database("sqlite:///database.db", timeout=5)
@@ -285,8 +291,8 @@ async def auth(server: int = -1, password: str = "", token: str = "none"):
     if server <= 0 or not await is_authorized(server, token):
         token = uuid.uuid4().hex
         server = await database.execute(
-            "INSERT INTO servers (token, meta) VALUES (:token, :meta)",
-            {"token": token, "meta": "{}"},
+            "INSERT INTO servers (token, meta, password) VALUES (:token, :meta, :password)",
+            {"token": token, "meta": "{}", "password": password},
         )
 
     return {"token": token, "server": server}
@@ -436,3 +442,30 @@ async def get_chunk(
     y: int = -9999,
 ):
     return Response(await get_chunk_png(server, dimension, x, z, w, h, scale, y))
+
+
+@cached(cache=TTLCache(maxsize=1024, ttl=60))
+@app.get("/v1/chunk_meta/{server}/{dimension}")
+async def get_chunk_meta(
+    server: int, dimension: str, x: int, z: int, w: int = 1, h: int = 1
+):
+    identifier = await get_dimension_identifier(server, dimension)
+
+    chunks = await database.fetch_all(
+        f"SELECT meta, x, z FROM chunks_{identifier} WHERE x >= :x0 AND x < :x1 AND y = :y AND z >= :z0 AND z < :z1",
+        {"x0": x, "x1": x + w, "y": -9999, "z0": z, "z1": z + h},
+    )
+
+    results = []
+    for chunk in chunks:
+        meta = json.loads(chunk[0])
+        if meta:
+            results.append(
+                {
+                    "meta": meta,
+                    "x": chunk[1],
+                    "z": chunk[2],
+                }
+            )
+
+    return results

@@ -69,6 +69,8 @@ public class AuthHandler {
 
             immersiveToken = token;
             immersiveIdentifier = newIdentifier;
+
+            Common.LOGGER.error("Immersive Web Map connected to instance " + immersiveIdentifier + ".");
         });
     }
 

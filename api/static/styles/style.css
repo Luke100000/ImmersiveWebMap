@@ -11,3 +11,7 @@ canvas {
 .clear {
     clear: both;
 }
+
+.tooltip-box {
+    position: absolute;
+}
