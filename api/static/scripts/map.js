@@ -19,7 +19,7 @@ window.onload = async function () {
 
     function getImage(x, y, tileSize, scale, load_image = false) {
         const tileCount = tileSize / 16;
-        const path = "http://localhost:8000/v1/chunk/" + currentServer + "/" + currentDimension + "?x=" + (x * tileCount) + "&z=" + (y * tileCount) + "&w=" + tileCount + "&h=" + tileCount + "&scale=" + scale
+        const path = "/v1/chunk/" + currentServer + "/" + currentDimension + "?x=" + (x * tileCount) + "&z=" + (y * tileCount) + "&w=" + tileCount + "&h=" + tileCount + "&scale=" + scale
         if (!cache.has(path)) {
             if (load_image) {
                 let img = new Image()
@@ -79,14 +79,15 @@ window.onload = async function () {
             ctx.translate(canvas.width / 2 - originX, canvas.height / 2 - originZ);
         }
 
-        // Clear the entire canvas
         const p1 = ctx.transformedPoint(0, 0);
         const p2 = ctx.transformedPoint(canvas.width, canvas.height);
         const p3 = ctx.transformedPoint(1, 1);
 
+        // Clear the entire canvas
         ctx.save();
         ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#d5be95";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.restore();
 
         let zoom = Math.sqrt((p3.x - p1.x) ** 2 + (p3.y - p1.y) ** 2);
@@ -203,7 +204,7 @@ window.onload = async function () {
     canvas.addEventListener('mousewheel', handleScroll, false);
 
     async function fetchMeta() {
-        let url = "http://localhost:8000/v1/meta/" + currentServer + "/" + currentDimension;
+        let url = "/v1/meta/" + currentServer + "/" + currentDimension;
         try {
             const response = await fetch(url);
             if (response.ok) {

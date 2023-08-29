@@ -53,6 +53,7 @@ public class AuthHandler {
 
             // Failed to auth
             if (request == null) {
+                Common.LOGGER.error("Failed to authenticate with the Immersive Web Map server.");
                 return;
             }
 

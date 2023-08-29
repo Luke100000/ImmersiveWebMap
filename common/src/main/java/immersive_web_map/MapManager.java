@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class MapManager {
     protected static final Executor RENDERER = Executors.newFixedThreadPool(Config.getInstance().renderThreads);
-    protected static final Executor UPLOADER = Executors.newFixedThreadPool(Config.getInstance().uploadThreads);
+    public static final Executor UPLOADER = Executors.newFixedThreadPool(Config.getInstance().uploadThreads);
 
     public static final AtomicInteger totalRenders = new AtomicInteger();
     public static final AtomicInteger outstandingRenders = new AtomicInteger();
@@ -207,7 +207,7 @@ public class MapManager {
     public static void tick(MinecraftServer server) {
         tick++;
 
-        if (tick % 200 == 0) {
+        if (tick % 200 == 0 && AuthHandler.getImmersiveIdentifier() != null) {
             // World information
             JsonObject json = new JsonObject();
             json.addProperty("name", server.getServerMotd());

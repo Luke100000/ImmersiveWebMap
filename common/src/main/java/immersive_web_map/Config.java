@@ -10,7 +10,7 @@ public final class Config extends JsonConfig {
     @SuppressWarnings("unused")
     public String README = "https://github.com/Luke100000/ImmersiveWebMap/wiki/Config";
 
-    public String url = "http://localhost:8000/";
+    public String url = "https://map.conczin.net/";
     public int renderThreads = 1;
     public int uploadThreads = 2;
 }

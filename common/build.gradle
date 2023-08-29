@@ -2,6 +2,18 @@ architectury {
     common(rootProject.enabled_platforms.split(","))
 }
 
+repositories {
+    maven { url "https://www.cursemaven.com" }
+    maven {
+        name = "FTB Maven"
+        url = "https://maven.saps.dev/releases/"
+        content {
+            includeGroup("dev.ftb.mods")
+            includeGroup("dev.latvian.mods")
+        }
+    }
+}
+
 loom {
     //noinspection GroovyAssignabilityCheck
     accessWidenerPath = file("src/main/resources/immersive_web_map.accesswidener")
@@ -11,4 +23,6 @@ dependencies {
     // We depend on fabric loader here to use the fabric @Environment annotations and get the mixin dependencies
     // Do NOT use other classes from fabric loader
     modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
+
+    modImplementation "dev.ftb.mods:ftb-chunks:${rootProject.ftb_chunks_version}"
 }

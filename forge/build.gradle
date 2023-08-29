@@ -25,8 +25,22 @@ configurations {
     developmentForge.extendsFrom common
 }
 
+repositories {
+    maven { url "https://www.cursemaven.com" }
+    maven {
+        name = "FTB Maven"
+        url = "https://maven.saps.dev/releases/"
+        content {
+            includeGroup("dev.ftb.mods")
+            includeGroup("dev.latvian.mods")
+        }
+    }
+}
+
 dependencies {
     forge "net.minecraftforge:forge:${rootProject.minecraft_version}-${rootProject.forge_version}"
+
+    modImplementation "dev.ftb.mods:ftb-chunks-forge:${rootProject.ftb_chunks_version}"
 
     common(project(path: ":common", configuration: "namedElements")) { transitive false }
     shadowCommon(project(path: ":common", configuration: "transformProductionForge")) { transitive = false }

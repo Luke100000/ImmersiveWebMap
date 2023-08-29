@@ -28,7 +28,7 @@ public class Command {
 
     private static String humanReadable(long bytes, String postfix) {
         if (-1000 < bytes && bytes < 1000) {
-            return bytes + " B";
+            return bytes + " " + postfix;
         }
         CharacterIterator ci = new StringCharacterIterator("kMGTPE");
         while (bytes <= -999_950 || bytes >= 999_950) {

@@ -111,7 +111,8 @@ async def setup():
            oid INTEGER PRIMARY KEY AUTOINCREMENT,
            token TEXT,
            meta TEXT,
-           password TEXT
+           password TEXT,
+           last_auth INTEGER
         )
     """
     )
